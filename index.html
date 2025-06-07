@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Daily Carbon Footprint Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    canvas { margin-top: 30px; }
+    #suggestions { background: #ecf0f1; padding: 1rem; border-radius: 8px; margin-top: 20px; }
+    #logHistory, #averageStats { margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDKDLRuBviRlcU8dOfCgmEk1KjKp4gT9Wc",
+      authDomain: "ecotrack-e50f8.firebaseapp.com",
+      databaseURL: "https://ecotrack-e50f8-default-rtdb.firebaseio.com",
+      projectId: "ecotrack-e50f8",
+      storageBucket: "ecotrack-e50f8.firebasestorage.app",
+      messagingSenderId: "806396695933",
+      appId: "1:806396695933:web:6abdba4efa8527ddc52814"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    let currentUser = null;
+
+    firebase.auth().onAuthStateChanged(user => {
+      if (!user) {
+        window.location.href = 'login.html';
+      } else {
+        currentUser = user;
+        document.getElementById('usernameDisplay').textContent = user.email;
+        loadPreviousLogs();
+        loadAverageStats();
+        loadLineChart();
+      }
+    });
+  </script>
+
+  <div class="container">
+    <h1>♻️ Eco Carbon Footprint Tracker</h1>
+
+    <div id="userInfo" style="margin-bottom: 20px;">
+      Logged in as: <strong id="usernameDisplay"></strong>
+      <button id="logoutBtn">Logout</button>
+    </div>
+
+    <form id="carbonForm">
+      <label for="travel">Car travel (km):</label>
+      <input type="number" id="travel" name="travel" required min="0" />
+
+      <label for="electricity">Electricity usage (kWh):</label>
+      <input type="number" id="electricity" name="electricity" required min="0" />
+
+      <label for="flights">Flights (hours):</label>
+      <input type="number" id="flights" name="flights" required min="0" />
+
+      <label for="meat">Meat Intake (grams):</label>
+      <input type="number" id="meat" required min="0" />
+
+      <label for="dairy">Dairy Intake (grams):</label>
+      <input type="number" id="dairy" required min="0" />
+
+      <label for="plant">Plant-based Intake (grams):</label>
+      <input type="number" id="plant" required min="0" />
+
+      <button type="submit">Calculate</button>
+    </form>
+
+    <div id="result"></div>
+    <div id="suggestions"></div>
+    <h2>Today's Emission Breakdown</h2>
+    <canvas id="emissionChart" width="600" height="300"></canvas>
+    <h2>Emission Trends</h2>
+    <canvas id="trendChart" width="600" height="300"></canvas>
+    <h2>Previous Logs</h2>
+    <ul id="logHistory"></ul>
+    <h2>Average Stats</h2>
+    <div id="averageStats"></div>
+  </div>
+
+  <script>
+    const logoutBtn = document.getElementById('logoutBtn');
+    logoutBtn.addEventListener('click', () => {
+      firebase.auth().signOut().then(() => {
+        window.location.href = 'login.html';
+      });
+    });
+
+    document.getElementById('carbonForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const travel = parseFloat(document.getElementById('travel').value) || 0;
+      const electricity = parseFloat(document.getElementById('electricity').value) || 0;
+      const flights = parseFloat(document.getElementById('flights').value) || 0;
+      const meat = parseFloat(document.getElementById('meat').value) || 0;
+      const dairy = parseFloat(document.getElementById('dairy').value) || 0;
+      const plant = parseFloat(document.getElementById('plant').value) || 0;
+
+      const carEmission = travel * 0.12;
+      const elecEmission = electricity * 0.5;
+      const flightEmission = flights * 0.25;
+      const meatEmission = meat * 0.027;
+      const dairyEmission = dairy * 0.013;
+      const plantEmission = plant * 0.005;
+
+      const total = carEmission + elecEmission + flightEmission + meatEmission + dairyEmission + plantEmission;
+      document.getElementById('result').innerHTML = `<h3>Total Carbon Emission: ${total.toFixed(2)} kg CO2</h3>`;
+
+      const suggestions = [];
+      if (carEmission > 5) suggestions.push("🚗 Your car travel emissions are high. Try walking, biking, carpooling, or using public transport for short and routine trips to significantly reduce emissions.");
+      if (elecEmission > 5) suggestions.push("💡 Electricity use is on the higher side. Consider turning off appliances when not in use, using LED lights, and minimizing air conditioning usage.");
+      if (meatEmission > 2) suggestions.push("🥩 Meat consumption has a large carbon footprint. Try integrating more plant-based meals into your week, even 1-2 days can make a difference.");
+      if (flightEmission > 1) suggestions.push("✈️ Flights have a high environmental impact. Combine trips, avoid short-haul flights, and opt for trains or virtual meetings where possible.");
+
+      document.getElementById('suggestions').innerHTML = suggestions.length
+        ? `<h4>Personalized Suggestions to Reduce Your Carbon Footprint</h4><ul>${suggestions.map(s => `<li>${s}</li>`).join('')}</ul>`
+        : '<h4>🎉 Fantastic job! Your carbon impact today is minimal. Keep up the sustainable habits!</h4>';
+
+      const ctx = document.getElementById('emissionChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Car', 'Electricity', 'Flights', 'Meat', 'Dairy', 'Plant'],
+          datasets: [{
+            label: 'kg CO2',
+            data: [carEmission, elecEmission, flightEmission, meatEmission, dairyEmission, plantEmission],
+            backgroundColor: ['#3498db', '#2ecc71', '#f1c40f', '#e74c3c', '#9b59b6', '#1abc9c']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { title: { display: true, text: 'Carbon Emissions Breakdown' } }
+        }
+      });
+
+      const logData = {
+        timestamp: new Date().toISOString(),
+        car: carEmission,
+        electricity: elecEmission,
+        flights: flightEmission,
+        meat: meatEmission,
+        dairy: dairyEmission,
+        plant: plantEmission,
+        total: total
+      };
+      firebase.database().ref(`users/${currentUser.uid}/logs`).push(logData);
+    });
+
+    function loadPreviousLogs() {
+      const logList = document.getElementById('logHistory');
+      const ref = firebase.database().ref(`users/${currentUser.uid}/logs`);
+      ref.orderByChild('timestamp').limitToLast(10).on('value', snapshot => {
+        logList.innerHTML = '';
+        snapshot.forEach(child => {
+          const log = child.val();
+          const date = new Date(log.timestamp).toLocaleDateString();
+          const item = document.createElement('li');
+          item.textContent = `${date} – Total: ${log.total.toFixed(2)} kg CO2`;
+          logList.appendChild(item);
+        });
+      });
+    }
+
+    function loadAverageStats() {
+      const statsRef = firebase.database().ref(`users/${currentUser.uid}/logs`);
+      statsRef.once('value', snapshot => {
+        let total = 0;
+        let count = 0;
+        snapshot.forEach(child => {
+          total += child.val().total;
+          count++;
+        });
+        const avg = count ? (total / count).toFixed(2) : 0;
+        document.getElementById('averageStats').innerHTML = `<p>📊 Average Emission: ${avg} kg CO2 per entry</p>`;
+      });
+    }
+
+    function loadLineChart() {
+      const trendRef = firebase.database().ref(`users/${currentUser.uid}/logs`);
+      trendRef.orderByChild('timestamp').on('value', snapshot => {
+        const labels = [];
+        const data = [];
+        snapshot.forEach(child => {
+          const log = child.val();
+          labels.push(new Date(log.timestamp).toLocaleDateString());
+          data.push(log.total);
+        });
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        new Chart(trendCtx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Total Emissions Over Time',
+              data: data,
+              borderColor: '#2980b9',
+              fill: false
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { title: { display: true, text: 'Emission Trend' } }
+          }
+        });
+      });
+    }
+  </script>
+</body>
+</html>
