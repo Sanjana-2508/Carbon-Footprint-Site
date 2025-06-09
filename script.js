@@ -199,4 +199,3 @@ window.addEventListener('load', () => {
     renderHistoricalChart(savedData);
   }
 });
-
