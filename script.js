@@ -35,13 +35,26 @@ firebase.auth().onAuthStateChanged(user => {
     window.location.href = 'login.html';
   } else {
     currentUser = user;
-    document.getElementById('usernameDisplay').textContent = user.email;
+
+    const userRef = firebase.database().ref(`users/${user.uid}`);
+    userRef.once('value').then(snapshot => {
+      if (!snapshot.child('username').exists()) {
+        const username = prompt("Enter your preferred username:");
+        if (username) {
+          userRef.update({ username });
+        }
+      }
+      // Display username
+      const displayName = snapshot.child('username').val() || user.email.split('@')[0];
+      document.getElementById('usernameDisplay').textContent = displayName;
+
     loadPreviousLogs();
     loadAverageStats();
     loadLineChart();
     loadBadges();
     loadStreak();
     loadWeeklyChallenge();
+   });
   }
 });
 
@@ -174,7 +187,10 @@ function loadWeeklyChallenge() {
     }
 
     window.currentChallenge = challengeData;
-    document.getElementById('challenges').innerText = challengeData.description;
+    const challengePara = document.querySelector('#challenges p');
+    if (challengePara) {
+    challengePara.textContent = challengeData.description;
+    }
   });
 }
 
@@ -399,7 +415,6 @@ function loadBadges() {
     });
   });
 }
-
 
 // 🗓️ Week Compare
 document.getElementById('compareBtn').addEventListener('click', compareWeeks);

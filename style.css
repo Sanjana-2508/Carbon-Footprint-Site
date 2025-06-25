@@ -160,7 +160,7 @@ body.dark-mode {
 
 .dark-mode .container {
   background-color: #1f1f1f;
-  box-shadow: 0 0 12px rgba(0, 255, 170, 0.2);
+  box-shadow: 0 0 12px rgba(244, 250, 248, 0.2);
 }
 
 .dark-mode input, .dark-mode button {
@@ -185,4 +185,33 @@ body.dark-mode {
 
 .dark-mode .theme-toggle {
   background: linear-gradient(to right, #3a1c71, #d76d77, #ffaf7b);
+}
+
+.nav-button {
+  display: inline-block;
+  padding: 8px 14px;
+  background-color: #3498db;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: 600;
+  margin: 10px 6px;
+  transition: background 0.3s;
+}
+.nav-button:hover {
+  background-color: #2980b9;
+}
+
+.logout-button {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 10px;
+}
+.logout-button:hover {
+  background-color: #c0392b;
 }

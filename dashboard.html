@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EcoTrack Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+</head>
+<body>
+  <button class="theme-toggle">🌓 Toggle Theme</button>
+  <div class="top-buttons">
+    <button id="trackerBtn">🌍 Carbon Tracker</button>
+    <button id="logoutBtn">Logout</button>
+  </div>
+
+  <div class="container">
+    <h1>🌿 Eco Tracker Dashboard</h1>
+    <h2>👋 Welcome back, <span id="username">User</span></h2>
+
+    <section class="stats">
+      <h3>📊 Your Stats</h3>
+      <p>🔥 Current Streak: <span id="streak">0</span> days</p>
+      <p>🎮 XP: <span id="xp">0</span> — <span id="levelDisplay">Level 0</span></p>
+      <div class="xp-bar"><div id="xpFill"></div></div>
+    </section>
+
+    <section class="badges">
+      <h3>🏅 Your Badges</h3>
+      <div id="badgeList"></div>
+    </section>
+
+    <section class="next-badge">
+      <h3>🎯 Next Badge to Unlock</h3>
+      <p><span id="nextBadgeName">Loading...</span> — <span id="nextBadgeProgress">0%</span></p>
+      <div class="progress-bar"><div id="nextBadgeFill"></div></div>
+    </section>
+
+    <section class="leaderboard">
+      <h3>🏆 Leaderboard</h3>
+      <ol id="leaderboardList"></ol>
+    </section>
+  </div>
+
+  <script src="dashboard.js"></script>
+  <script>
+    document.getElementById('trackerBtn').addEventListener('click', () => {
+      window.location.href = 'index.html'; // or your actual tracker page
+    });
+  </script>
+</body>
+</html>
