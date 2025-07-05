@@ -41,6 +41,7 @@ firebase.auth().onAuthStateChanged(user => {
       document.getElementById('username').textContent = displayName;
 
     loadXP();
+    loadWeeklyXP();
     loadStreak(() => {
       loadBadges();
       loadNextBadge();
@@ -72,6 +73,32 @@ function loadXP() {
     document.getElementById('xp').textContent = xpTotal;
     document.getElementById('levelDisplay').textContent = `Level ${level}`;
     document.getElementById('xpFill').style.width = `${percent}%`;
+  });
+}
+
+// Weekly XP
+function getWeekKey(date = new Date()) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return d.getFullYear() + "-W" + String(1 + Math.round(((d - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7));
+}
+
+function loadWeeklyXP() {
+  const week = getWeekKey();
+  firebase.database().ref(`users/${currentUser.uid}/xp`).once('value', snap => {
+    let weeklyXP = 0;
+    snap.forEach(child => {
+      const xpEntry = child.val();
+      if (xpEntry.timestamp && getWeekKey(new Date(xpEntry.timestamp)) === week){
+        weeklyXP += xpEntry.points || 0;
+      }
+    });
+
+    // ✅ Save and also display it
+    firebase.database().ref(`users/${currentUser.uid}/weeklyXP/${week}`).set(weeklyXP);
+    document.getElementById('weeklyXP').textContent = weeklyXP; // ✅ FIXED DISPLAY
   });
 }
 
@@ -121,10 +148,9 @@ function loadBadges() {
     });
 
     const streak = window.currentStreak || 0;
-    const totalDays = dateSet.size;
     const earned = [];
 
-    // 🗓️ Time/Logging/Streak badges
+    // 🔁 Streak & Time badges
     if (streak >= 7) earned.push('📆 7-Day Logger');
     if (streak >= 30) earned.push('🌿 30-Day Streak');
     if (streak >= 50) earned.push('🏅 50-Day Consistency');
@@ -133,54 +159,67 @@ function loadBadges() {
     if (streak >= 365) earned.push('🌍 1-Year Eco Legend');
     if (streak >= 15) earned.push('🌀 Streak Addict');
 
-    // ♻️ Eco Habits
+    // ♻️ Habit badges
     if (meatFree >= 5) earned.push('🥦 Meat-Free Master');
     if (dairyFree >= 5) earned.push('🥛 Dairy-Free Champ');
     if (lowEnergy >= 5) earned.push('🔋 Low Energy Hero');
     if (lowEmission >= 3) earned.push('🪶 Carbon Cutter');
     if (noFlight) earned.push('🛫 No-Flight Week');
 
-    // 🎯 Fun Badges
+    // 🎯 Fun badges
     const hour = new Date().getHours();
     if (hour >= 0 && hour < 4) earned.push('🌙 Night Owl');
     if (hour >= 5 && hour < 7) earned.push('🌅 Early Bird');
 
-    // 🎮 XP + Challenge
-    firebase.database().ref(`users/${currentUser.uid}/xp`).once('value', xpSnap => {
-      let xp = 0;
-      xpSnap.forEach(c => xp += c.val().points || 0);
-      if (xp >= 1000) earned.push('🎮 XP Hunter');
-      if (xp >= 3000) earned.push('🧠 Eco Guru');
+    // 🎮 XP + Challenges
+  firebase.database().ref(`users/${currentUser.uid}/xp`).once('value').then(xpSnap => {
+     let xp = 0;
+     xpSnap.forEach(x => {
+    const points = parseFloat(x.val().points);
+    if (!isNaN(points)) xp += points;
+  });
 
-      firebase.database().ref(`users/${currentUser.uid}/challenges`).once('value', chSnap => {
-        if (Object.keys(chSnap.val() || {}).length >= 3) {
-          earned.push('🏆 Challenge Streaker');
-        }
+  console.log("Total XP:", xp);
 
-        // Leaderboard Topper
-        firebase.database().ref('users').once('value', snap => {
-          const list = [];
-          snap.forEach(u => {
-            let total = 0;
-            u.child('xp').forEach(x => total += x.val().points || 0);
-            list.push({ uid: u.key, xp: total });
-          });
-          list.sort((a, b) => b.xp - a.xp);
-          if (list.slice(0, 3).some(u => u.uid === currentUser.uid)) {
-            earned.push('🥇 Top 3 Leader');
-          }
+  if (xp >= 1000) earned.push('🎮 XP Hunter');
+  if (xp >= 3000) earned.push('🧠 Eco Guru');
 
-          badgeRef.once('value', bSnap => {
-            const existing = bSnap.val() || {};
-            const newOnes = earned.filter(b => !existing[b]);
-            for (const b of newOnes) badgeRef.child(b).set(true);
 
-            const all = [...new Set([...Object.keys(existing), ...newOnes])];
-            container.innerHTML = '';
-            all.forEach(b => container.innerHTML += `<span class="badge">${b}</span>`);
-          });
-        });
+      return firebase.database().ref(`users/${currentUser.uid}/challenges`).once('value');
+    }).then(chSnap => {
+      if (Object.keys(chSnap.val() || {}).length >= 3) {
+        earned.push('🏆 Challenge Streaker');
+      }
+
+      return firebase.database().ref('users').once('value');
+    }).then(usersSnap => {
+      const leaderboard = [];
+      usersSnap.forEach(user => {
+        let xp = 0;
+        user.child('xp').forEach(x => xp += parseInt(x.val().points || 0));
+        leaderboard.push({ uid: user.key, xp });
       });
+      leaderboard.sort((a, b) => b.xp - a.xp);
+      const top3 = leaderboard.slice(0, 3).map(u => u.uid);
+      if (top3.includes(currentUser.uid)) {
+        earned.push('🥇 Top 3 Leader');
+      }
+
+      return badgeRef.once('value');
+    }).then(bSnap => {
+      const already = bSnap.val() || {};
+      const newBadges = earned.filter(b => !already[b]);
+
+      // Save only new ones
+      newBadges.forEach(b => badgeRef.child(b).set(true));
+
+      const all = [...new Set([...Object.keys(already), ...newBadges])];
+      container.innerHTML = '';
+      all.forEach(b => {
+        container.innerHTML += `<span class="badge">${b}</span>`;
+      });
+
+      console.log("Final badges shown:", all);
     });
   });
 }
@@ -218,24 +257,54 @@ function loadNextBadge() {
 }
 
 // 🏆 Leaderboard
-firebase.database().ref('users').once('value', snapshot => {
-  const leaderboard = [];
-
-  snapshot.forEach(userSnap => {
-    let xp = 0;
-    userSnap.child('xp').forEach(x => xp += x.val().points || 0);
-
-    const name = userSnap.child('username').val() || userSnap.key.slice(0, 6);
-    leaderboard.push({ name, xp });
-  });
-
-  leaderboard.sort((a, b) => b.xp - a.xp);
-
+function loadLeaderboard() {
+  const weekKey = getCurrentWeek();
   const list = document.getElementById('leaderboardList');
-  list.innerHTML = '';
-  leaderboard.slice(0, 10).forEach((entry, index) => {
-    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
-    list.innerHTML += `<li>${medal} #${index + 1} - ${entry.name}: ${entry.xp} XP</li>`;
-  });
-});
+  firebase.database().ref('users').once('value', snap => {
+    const data = [];
+    snap.forEach(user => {
+      const name = user.child('username').val() || user.key.slice(0, 6);
+      const weekly = user.child(`weeklyXP/${weekKey}`).val() || 0;
+      data.push({ name, xp: weekly });
+    });
+    data.sort((a, b) => b.xp - a.xp);
+    list.innerHTML = '';
+    data.slice(0, 10).forEach((e, i) => {
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+      list.innerHTML += `<li>${medal} #${i + 1} - ${e.name}: ${e.xp} XP</li>`;
+    });
 
+    // Save top 1
+    if (data.length > 0) {
+      firebase.database().ref('leaderboardHistory').child(weekKey).set(data[0]);
+    }
+  });
+}
+
+// Last week’s top winner
+function loadPreviousWinner() {
+  const prevWeek = getLastWeek();
+  const ref = firebase.database().ref(`leaderboardHistory/${prevWeek}`);
+  ref.once('value', snap => {
+    if (snap.exists()) {
+      const w = snap.val();
+      const div = document.getElementById('winner');
+      div.innerHTML = `<p>🏅 Last Week's Winner: <strong>${w.name}</strong> with ${w.xp} XP!</p>`;
+    }
+  });
+}
+
+// Utils
+function getCurrentWeek(date = new Date()) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const week1 = new Date(d.getFullYear(), 0, 4);
+  return d.getFullYear() + "-W" + String(1 + Math.round(((d - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7));
+}
+
+function getLastWeek() {
+  const d = new Date();
+  d.setDate(d.getDate() - 7);
+  return getCurrentWeek(d);
+}

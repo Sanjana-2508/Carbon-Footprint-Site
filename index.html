@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EcoTrack - Gamified Carbon Tracker</title>
+  <title>EcoTrack - Personal Carbon Footprint Tracker</title>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -22,12 +22,24 @@
     </div>
 
     <form id="carbonForm">
-      <label>Car travel (km):</label><input id="travel" type="number" min="0"/>
-      <label>Electricity usage (kWh):</label><input id="electricity" type="number" min="0"/>
-      <label>Flights (hrs):</label><input id="flights" type="number" min="0"/>
-      <label>Meat Intake (g):</label><input id="meat" type="number" min="0"/>
-      <label>Dairy Intake (g):</label><input id="dairy" type="number" min="0"/>
-      <label>Plant Intake (g):</label><input id="plant" type="number" min="0"/>
+      <label>🚗 Car travel (km):</label>
+      <input id="travel" type="number" min="0" placeholder="e.g., 25" />
+
+      <label>⚡ Electricity usage (kWh):</label>
+      <input id="electricity" type="number" min="0" placeholder="e.g., 15" />
+
+      <label>✈️ Flights (hours):</label>
+      <input id="flights" type="number" min="0" placeholder="e.g., 2" />
+
+      <label>🥩 Meat Intake (grams):</label>
+      <input id="meat" type="number" min="0" placeholder="e.g., 200" />
+
+      <label>🥛 Dairy Intake (grams):</label>
+      <input id="dairy" type="number" min="0" placeholder="e.g., 300" />
+
+      <label>🥕 Plant-based Intake (grams):</label>
+      <input id="plant" type="number" min="0" placeholder="e.g., 500" />
+
       <button type="submit">Calculate</button>
     </form>
 

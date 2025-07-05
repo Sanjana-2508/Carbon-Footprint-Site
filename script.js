@@ -265,9 +265,10 @@ function loadAverageStats() {
 
 // 📈 Trend Chart
 function loadLineChart() {
-  const ref = firebase.database().ref(`users/${currentUser.uid}/logs`);
+  const ref = firebase.database().ref(`users/${currentUser.uid}/logs`).limitToLast(25);
   ref.on('value', snapshot => {
     const labels = [], data = [];
+
     snapshot.forEach(child => {
       const log = child.val();
       labels.push(new Date(log.timestamp).toLocaleDateString());
@@ -276,6 +277,7 @@ function loadLineChart() {
 
     const ctx = document.getElementById('trendChart').getContext('2d');
     if (window.trendChartInstance) window.trendChartInstance.destroy();
+    
     window.trendChartInstance = new Chart(ctx, {
       type: 'line',
       data: {
@@ -284,12 +286,27 @@ function loadLineChart() {
           label: 'Total Emissions',
           data,
           borderColor: '#27ae60',
-          fill: false
+          fill: false,
+          tension: 0.3,
+          pointRadius: 4
         }]
       },
       options: {
         responsive: true,
-        plugins: { title: { display: true, text: 'Emission Trend' } }
+        plugins: {
+          title: {
+            display: true,
+            text: 'Emission Trend (Last 25 Entries)'
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              maxRotation: 45,
+              minRotation: 45
+            }
+          }
+        }
       }
     });
   });
