@@ -47,6 +47,7 @@ firebase.auth().onAuthStateChanged(user => {
       loadNextBadge();
     });
     loadLeaderboard();
+    loadPreviousWinner();
     });
   }
 });
